@@ -1,4 +1,6 @@
 > *Published from the private development repository on 2026-10-08 as `Threat-Model-v1.md`. Unedited except that its two closing sections, the list of open gaps and prioritised follow-ups, are withheld from this public copy. Identifiers such as `S16.38` or `S3c.4` are internal work-section IDs, and file names refer to the private repository.*
+>
+> *An [addendum of 2026-10-31](#addendum-2026-10-31-what-changed-since-v1) at the end covers what changed since v1: group keys, push notifications and calls. v1 itself is unchanged.*
 
 # Family Capsule - Threat Model v1
 
@@ -383,3 +385,35 @@ cross-head/Decryptor smoke are mandatory S16.3 work before production.
 | Denial of service | Dependency removal or compromised update breaks builds | Lock/pin discipline and source history | External registries remain dependencies |
 | Elevation of privilege | Pipeline identity deploys malicious code or reads secrets | Least-privilege target design | Managed identity and CI isolation are Phase 12 work |
 
+---
+
+## Addendum 2026-10-31: what changed since v1
+
+*Not part of the v1 model above; a summary of boundaries added or changed since it was written.*
+
+### Group keys change the realtime relay boundary
+
+A members-only channel is now sealed under a **group key** wrapped only to the group's members (S14.17 / S14.C), so v1's "model A is not cryptographic participant isolation" no longer holds for those channels: a capsule member outside the group cannot open their ciphertext. Keys are wrapped to and accepted from only **verified** member keys (invitation check, member security codes or the encrypted key directory), never a first sight; a sealed roster and a key chain make rotation on removal verifiable, and the synced pin store refuses a rollback on every device. Messages written before a channel became a group remain readable to anyone who kept a copy — stated in the app.
+
+### Push provider boundary
+
+| Threat | Scenario | Existing control | Residual |
+|---|---|---|---|
+| Information disclosure | A provider (Google, Microsoft, a browser's push service) reads pushes | Fixed-length record: event kind + per-device alias only; FCM/WNS sealed per registration, Web Push RFC 8291 | Providers learn that an event happened for a device and when; one event fanning out to a family's devices lets a provider group them. FCM/WNS sealing hides content from providers, not from our server |
+| Spoofing | A forged push | The record names no content; the app reads what changed from the Api | A forged push can only cause a spurious notification |
+| Repudiation / tampering | — | Records are integrity-protected in transit by the provider's channel | — |
+| Denial of service | Pushes dropped or delayed | Best effort by design; the app reads the Api on open | Lost pushes are lost |
+| Elevation of privilege | A registration outlives its session | Registrations are per session, protected at rest, deleted by a trigger when the session ends, never returned by any endpoint | — |
+
+### Media server and TURN relay boundary (calls, in development)
+
+| Threat | Scenario | Existing control | Residual |
+|---|---|---|---|
+| Information disclosure | The media server or relay watches a call | Frames encrypted on the sender (`fc-frame/v1`), per-sender/track/stream keys by HKDF; a transform drops every frame until a key exists; a browser test asserts every forwarded frame is ciphertext under the call key | IP addresses, who is in a call and when, packet sizes and timing, and who is speaking (audio-level header kept by decision); audio at a constant bitrate |
+| Spoofing | The server offers its own call key, replays an old one or reflects a wrap | Key accepted only from a verified keyholder key, under this participant's own owner name and join nonce, at an epoch above any accepted; group channels confined to the verified group | A participant holding the epoch key can forge another participant's frames |
+| Tampering | The server hides or relabels a key-holder on someone's screen | The call screen is the **sealed roster**, not the server's list | — |
+| Elevation of privilege | A removed member keeps listening | Every roster change starts a new epoch with a fresh key; the Api re-reads membership on every roster read | On a capsule-wide channel the server could keep a removed member who is still verified on the keyholder's device in the roster |
+| Denial of service | The server stalls a call or drops frames | Keyholder = earliest *connected* place; the media server ends calls if the Api's roster check is unreachable for 30 s | The server can always deny service |
+| Repudiation | — | — | No per-frame signatures; no forward secrecy against a later account-key compromise of a recorded call (wraps are deleted when the call ends) |
+
+The relay relays only to the media server (every other peer address is denied), and credentials are short-lived TURN REST credentials issued by the Api per call.
