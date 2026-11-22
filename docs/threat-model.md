@@ -66,7 +66,7 @@ The system does not promise:
 | Invite token and OOB fingerprint ceremony | Single use, expiry, authenticity | Token crosses the network; fingerprint is compared by humans out of band |
 | Auth challenges and signatures | Freshness, single use, account binding | Redis/distributed cache and TLS-protected auth requests |
 | Access and refresh tokens | Confidentiality, integrity, rotation, revocation | Client memory/protected storage and server-side token hashes |
-| Email OTP and OTP pepper | Confidentiality, expiry, attempt limiting | Auth plane only; currently PostgreSQL plus server secret |
+| Email OTP and OTP pepper | Confidentiality, expiry, attempt limiting | Auth plane only; Redis with a TTL, keys and code hashes under server secrets |
 | Membership, role, audit, and tenant state | Integrity, isolation, accountable changes | Api/PostgreSQL plaintext metadata |
 | Export archive | Confidentiality, integrity, completeness, availability | User-controlled file containing ciphertext and wrapped keys |
 | Server secrets | Confidentiality and rotation | Development secrets now; production Key Vault is S12.2 |
@@ -197,8 +197,9 @@ this boundary further.
    metadata, never either unlock secret or a private key.
 5. The client creates a random Capsule Key and wraps it to the first member's
    ECDH public key. Every ciphertext and wrap carries its applicable version.
-6. Email OTP verifies the account on the auth plane only; it never derives or
-   unlocks vault keys.
+6. Before any of this, a one-time code proves the address on the auth plane
+   (since November 2026); the code opens only the challenge of the attempt
+   that requested it, and it never derives or unlocks vault keys.
 
 Failure expectations: weak/missing inputs are rejected, wrong Key/recovery code
 cannot decrypt the bundle, ECDH and ECDSA private keys are not reused across

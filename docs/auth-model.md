@@ -31,7 +31,7 @@ The **two-plane rule is unchanged**: nothing the server knows ever enters the en
 | **ECDSA signing keypair** (P-256) | client, **new in v2** | auth | **public key only** | proves account possession by signing server challenges |
 | **Session tokens** (JWT access + rotating refresh) | server | auth | yes | issued after a verified signature; unchanged rotation/reuse-detection |
 | **Biometric / Windows Hello / passkey** | device | local unlock | no | releases the cached signing + ECDH keys on a trusted device (S3.5/S3.6/S14.8) |
-| **Email OTP** | server | auth | yes | one-time email verification at registration (unchanged, S3.7) |
+| **Email OTP** | server | auth | yes | proves the address **before** the account exists (since November 2026); each code opens only the challenge of the registration attempt that requested it |
 
 Note the deliberate **separate ECDSA signing keypair**: reusing the ECDH P-256 key for ECDSA signatures is a cross-algorithm key-reuse footgun, so v2 uses a dedicated signing keypair. Both private keys are wrapped together as one **bundle** so a single unlock yields both.
 
@@ -78,7 +78,7 @@ The server stores, per account: `signing_public_key` (P-256), `ecdh_public_key`,
 - ECDSA P-256 is a **fixed primitive** (built into .NET `System.Security.Cryptography.ECDsa` and WebCrypto `ECDSA`) — **no new dependency**. Do **not** reuse the ECDH key for signing (separate keypair, §2).
 - The challenge nonce store is ephemeral (Redis TTL, memory-fallback for dev) — single-use, short TTL; pairs with the S14.R OTP→Redis move.
 - **No PAKE / no self-rolled crypto.** Passkey PRF, platform keystore, and Windows Hello are OS APIs, not crypto libraries.
-- Email OTP (S3.7) still gates **account** verification at registration; it is auth-plane only and never unlocks the vault.
+- Email OTP proves the address before registration creates anything (since November 2026: no account or key material exists until it has); it is auth-plane only and never unlocks the vault.
 - 2FA/TOTP remains out of scope (separate post-MVP analysis, unchanged).
 
 ## 7. Cascade — sections to re-verify when v2 lands (S3c.5)

@@ -4,7 +4,7 @@ A condensed, current view of the system. The authentication details are in [auth
 
 ## Product
 
-A private, end-to-end encrypted "capsule" for one family: photos, videos and audio, notes, stories, recipes, people and a family tree, albums, an internal chat and (in development) group video calls. Built for one family first, and multi-tenant from day zero so it can grow into a service.
+A private, end-to-end encrypted "capsule" for one family: photos, videos and audio, notes, stories, recipes, people and a family tree, albums, an internal chat and end-to-end encrypted group video calls. Built for one family first, and multi-tenant from day zero so it can grow into a service.
 
 ## Core stance
 
@@ -26,7 +26,7 @@ A private, end-to-end encrypted "capsule" for one family: photos, videos and aud
 | Cache | Redis server-side; client-side caches for thumbnails and decrypted content; service worker for the WASM shell |
 | Observability | OpenTelemetry → Aspire dashboard (dev) / Application Insights (prod) |
 | Local dev | .NET Aspire + Docker: Postgres, Azurite, Redis, the media server and the TURN relay — fully offline |
-| Production host | Being chosen: a VPS under the project's own domain, or a managed cloud (the original plan was Azure, for managed SignalR). Requirements: [hosting-requirements.md](hosting-requirements.md) |
+| Production host | A VPS under the project's own domain (chosen 31 October 2026; the original plan was Azure, for managed SignalR), containers behind a TLS-terminating proxy, encrypted daily database backups with a tested restore. Requirements: [hosting-requirements.md](hosting-requirements.md) |
 
 ## Security model
 
@@ -50,7 +50,7 @@ A private, end-to-end encrypted "capsule" for one family: photos, videos and aud
 
 A generic **`items`** store: an open `type` discriminator plus a typed encrypted payload. A new feature is a new type in a `Core` registry, with no schema, API or crypto change. Chat messages are a specialised table for realtime volume and paging. Large media is sealed as chunks, so video can play progressively without decrypting the whole file first.
 
-## Calls *(in development)*
+## Calls *(Web, Windows, Android; the Apple apps next)*
 
 A call lives in a chat channel: up to 8 people, through **our own media server** (mediasoup behind our own signalling) and, where a network needs it, our own **TURN relay** that reaches only the media server. Both see opaque call and participant ids, never a member, account, capsule or channel, and both forward ciphertext.
 

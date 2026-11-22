@@ -1,6 +1,6 @@
 # Family Capsule — Hosting requirements
 
-What a production deployment has to run, what each part needs from the machine and the network, and what stays outside it. Written for choosing the first host (a VPS under the project's own domain is the option being weighed against a managed cloud). Sizes marked *estimate* have not been measured under real load yet.
+What a production deployment has to run, what each part needs from the machine and the network, and what stays outside it. Written for choosing the first host; a VPS under the project's own domain was chosen on 31 October 2026, and this page is now its baseline. Sizes marked *estimate* have not been measured under real load yet.
 
 ## What runs where
 
@@ -12,7 +12,7 @@ Everything the server side runs is **blind**: it stores and forwards ciphertext 
 | **Database** | PostgreSQL with row-level security on every capsule-scoped table; EF Core migrations | Persistent disk, backups; reachable only from the Api |
 | **Cache / rate limits** | Redis (token buckets for the two rate-limit planes; caches) | Small memory; reachable only from the Api |
 | **Blob storage** | Encrypted chunks (one blob = one chunk of at most 8 MiB plaintext; at most 128 MiB per blob). Behind an `IBlobStore` adapter: **local file system** or **Azure Blob** today; S3-compatible (e.g. Cloudflare R2) is the planned escape hatch | Disk or object storage sized for the capsules (default quota **25 GiB per capsule**); backups |
-| **Media server** *(calls, in development)* | Node.js 24 + mediasoup 3 behind the project's own signalling. Forwards encrypted media frames; admitted per call by a one-use token the Api signs | A **public IP**; one WebSocket signalling port (behind the proxy, `wss://`); a **UDP port range** for media (plus TCP fallback); CPU for packet forwarding |
+| **Media server** *(calls)* | Node.js 24 + mediasoup 3 behind the project's own signalling. Forwards encrypted media frames; admitted per call by a one-use token the Api signs | A **public IP**; one WebSocket signalling port (behind the proxy, `wss://`); a **UDP port range** for media (plus TCP fallback); CPU for packet forwarding |
 | **TURN relay** *(calls)* | coturn, credentials issued by the Api per call (TURN REST), relaying **only** to the media server | Public IP; `3478/udp` (and `5349/tcp` once TURN over TLS is configured); a UDP relay port range |
 | **Data Protection keys** | ASP.NET Core key ring (protects push registrations at rest) | A persistent, private directory (or a key vault) |
 | **Update channel** | The Api serves "is there a newer version" metadata and package bytes for the installed apps (Windows App Installer, Decryptor) | Static files on disk next to the Api |

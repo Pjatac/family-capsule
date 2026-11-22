@@ -23,6 +23,7 @@ A cold session reads the runbook, the handoff, the section index and `git log`, 
 - **A test is not considered written until it has been seen failing against the specific defect it claims to catch.** When the code is already fixed, the defect is re-introduced on purpose. Independent defects can be batched, but the set of failing tests must match the expected set exactly.
 - **A security review gates every SEC merge**, run against a fixed checklist by a separate strong-model reviewer on the real diff. Cross-cutting mechanisms (middleware, rate limiting, wire formats) are reviewed once more as soon as their shape is decided, before tests are built around them.
 - **Retries are budgeted.** At most three fix attempts per failure, each based on all errors at once. After that, or at any design question, the agent stops and asks instead of guessing.
+- **An independent reviewer.** In November 2026 a separate review role read the whole code base and turned every finding into a section with its own tests; each finding is first confirmed against the current code, and one that cannot be made to fail is recorded as disputed rather than closed silently. Findings a review leaves unfixed go to one register until the human decides each.
 - **The human owns the verdict.** Features with a visible surface end in a manual smoke test on real devices, and a section merges only after it passes.
 
 ## Golden rules

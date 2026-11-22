@@ -1,10 +1,10 @@
 # Family Capsule
 
-**A private, end-to-end encrypted vault for one family's memory:** photos, videos and audio, notes, stories, recipes, people and a family tree, albums, an internal chat and — in development — group video calls. Everything in it outlives the service, because a family can export the whole capsule and open it offline with an open-source reader.
+**A private, end-to-end encrypted vault for one family's memory:** photos, videos and audio, notes, stories, recipes, people and a family tree, albums, an internal chat and end-to-end encrypted group video calls. Everything in it outlives the service, because a family can export the whole capsule and open it offline with an open-source reader.
 
 Privacy here is the foundation, not a feature: **the server is blind**. All cryptography runs on the client. The server stores and relays ciphertext only, and it physically lacks the code to decrypt anything.
 
-> **Status (31 October 2026):** feature-complete pre-production. Web, Windows, Android and iOS clients run against a local backend; **choosing the production host is the next step** — see [Hosting requirements](docs/hosting-requirements.md). End-to-end encrypted group calls are being built (the Web client is done and verified; the installed apps are next). About 1,840 automated tests.
+> **Status (22 November 2026):** **in production** for the family, on a VPS under the project's own domain, with encrypted database backups and a tested restore. Web, Windows and Android clients run against it; the iOS and macOS apps are next to be verified there. End-to-end encrypted group calls work on Web, Windows and Android. November was spent on an **independent code review** and the hardening that followed it (see below). About 2,340 automated tests.
 >
 > This repository is a **public overview**. The source code is in a private repository.
 
@@ -17,12 +17,12 @@ Privacy here is the foundation, not a feature: **the server is blind**. All cryp
 | **Content** | Notes, stories (with on-device dictation, the people in them, a timeline, comments and earlier versions), recipes, people, a family tree, photos, videos and audio. Content carries its language, so a family writing in several can filter by it. New content types plug in without schema, API or crypto changes |
 | **Photos, video & audio** | A paged catalogue with client-generated thumbnails, albums by category, the date a photo was taken, and progressive playback of media sealed as encrypted chunks. Metadata embedded in a file is stripped on the device **before** encryption; the few details the app shows (such as the date taken and the place) travel inside the encrypted item instead |
 | **Chat** | Realtime channels (the server relays ciphertext only), emoji, channel visibility and admin roles. A **members-only channel is sealed under its own group key**, so other capsule members cannot read it |
-| **Calls** *(in development)* | Group video calls of up to 8 people in a chat channel, **end-to-end encrypted from the first frame**: the media server forwards frames it cannot read |
+| **Calls** | Group video calls of up to 8 people in a chat channel, **end-to-end encrypted from the first frame**: the media server forwards frames it cannot read. Web, Windows and Android today; the Apple apps and call recording are next |
 | **Notifications** | Push on Web, Android and Windows, per category, with nothing readable in the push — a fixed-length record with an event kind and a per-device alias |
 | **Members** | Invitation by emailed link, out-of-band fingerprint verification against key substitution, admin roles. One person can belong to several capsules |
 | **Export** | One archive (zip: manifest plus the same ciphertext the server held, never re-encrypted) with content, chat and members |
 | **Decryptor** | A standalone, **offline, open-source (Apache-2.0)** reader for that archive. It needs no network and no Family Capsule service. *Your archive outlives the company.* |
-| **Sign-in** | No password anywhere. A client-generated Key, a one-time recovery code, and local unlock with passkey/PRF (web), Windows Hello, or biometrics/PIN (mobile). A revoked session loses access within seconds |
+| **Sign-in** | No password anywhere. A client-generated Key, a one-time recovery code, and local unlock with passkey/PRF (web), Windows Hello, or biometrics/PIN (mobile). An address is proven with a one-time code **before** any account or key exists. A revoked session loses access within seconds |
 | **Updates** | Installed apps learn when a newer version exists; Windows updates in-app through App Installer. The server serves metadata and package bytes, and never instructs a client to run anything |
 
 ## Security model in brief
@@ -33,6 +33,7 @@ Privacy here is the foundation, not a feature: **the server is blind**. All cryp
 - **Relationships are encrypted too.** Album membership, tags, the people in a story and the family-tree edges live inside the encrypted payloads.
 - **Key-only authentication.** Login is a signature challenge; the server stores public keys only, and the unlock secrets never reach it in any form.
 - **Calls keyed on the clients.** A fresh random call key per roster change, wrapped only to members whose keys this device has verified, and a sealed list of who holds it — the call screen shows that list, not the server's.
+- **Hardened after an independent review (November 2026).** Every anonymous route has a declared body limit and an explicit authorization policy; rate-limit and one-time-code keys are keyed with a server secret, so a store dump does not reveal addresses; the security audit table is insert-only for the application; a registration code opens only the challenge of the attempt that requested it; production builds cannot contain development conveniences; an architecture "ratchet" test freezes known structural debt so it can only shrink.
 - **Honest limits.** Metadata (account email, message timing, file sizes and counts; for calls, who is in a call and when) is still visible to the server.
 
 ## Architecture
@@ -51,18 +52,18 @@ One shared .NET core and **one Razor UI** serve every platform:
                   Media server (mediasoup) + TURN relay — encrypted frames only
 ```
 
-Local development is fully offline with .NET Aspire and Docker. Every vendor sits behind an adapter; the production host is being chosen (a VPS under the project's own domain, or a managed cloud).
+Local development is fully offline with .NET Aspire and Docker. Every vendor sits behind an adapter. Production runs the same containers on a VPS under the project's own domain, behind a TLS-terminating proxy, with blobs on separate storage and encrypted daily database backups.
 
 ## Documents
 
 | Document | What it covers |
 |---|---|
 | [Architecture](docs/architecture.md) | Stack, key hierarchy, data model, calls, export, known limits |
-| [Hosting requirements](docs/hosting-requirements.md) | What production runs, ports, sizing, external services — for choosing the host |
+| [Hosting requirements](docs/hosting-requirements.md) | What production runs, ports, sizing, external services — written to choose the host, now the production baseline |
 | [Authentication model](docs/auth-model.md) | Key-only sign-in, signature-challenge login, recovery, local unlock |
 | [Threat model](docs/threat-model.md) | Assets, trust boundaries, adversaries, lifecycle flows, STRIDE per boundary |
 | [Export format](docs/export-format.md) | The archive the Decryptor reads |
-| [Development process](docs/development-process.md) | How it is built solo with AI coding agents: sections, repo-as-memory, test-first security work |
+| [Development process](docs/development-process.md) | How it is built solo with AI coding agents: sections, repo-as-memory, test-first security work, an independent reviewer |
 
 ## Contact
 
